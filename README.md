@@ -42,22 +42,48 @@ reports clean. Exit status is non-zero only when something needed *now* is missi
 
 ### GPU, on Windows
 
-`uv sync --extra phase-03` resolves torch from PyPI, and the PyPI Windows wheel is
-**CPU-only**. It installs and imports without complaint, and then never touches the GPU.
-Install from the PyTorch CUDA index instead — take the current `cuXXX` tag from
-[pytorch.org/get-started](https://pytorch.org/get-started/locally/):
+`uv sync --extra phase-03` resolves torch from PyPI, and **the PyPI Windows wheel is
+CPU-only** — 122 MB against 427 MB on Linux, because it carries no CUDA kernels. It
+installs and imports without complaint and then never touches the GPU. Training runs
+correctly, roughly 40x slower, with no error to grep for.
+
+Install from PyTorch's own index instead. On Linux the PyPI wheel already bundles CUDA
+(`torch==2.13.0` resolves to `2.13.0+cu130`), so this step is Windows-only:
 
 ```powershell
-uv pip install torch --index-url https://download.pytorch.org/whl/cuXXX
+# 1. check what your driver supports — the top-right figure is the max CUDA version
+nvidia-smi
+
+# 2. install a matching build. cu130 pairs with torch 2.13.x; if nvidia-smi reports
+#    a lower max CUDA, use the matching cuXXX tag from pytorch.org/get-started
+uv pip install torch --index-url https://download.pytorch.org/whl/cu130
+
+# 3. verify — this is the step that catches a silent CPU-only install
+python phase-00-setup-and-tooling/01-dev-environment/check_env.py --phase 3
 ```
 
-`check_env.py` tells the two failure modes apart, which `torch.cuda.is_available()`
-cannot:
+Expected on an RTX 3060 (Ampere, compute 8.6, 6 GB):
 
-| Symptom | Meaning | Fix |
+```
+PASS   PyTorch build    2.13.0+cu130, built against CUDA 13.0
+PASS   GPU 0            NVIDIA GeForce RTX 3060 Laptop GPU  6.0 GB  compute 8.6
+PASS     bf16 support   yes
+PASS     live matmul    executed on device
+```
+
+`check_env.py` separates the two faults that `torch.cuda.is_available()` collapses into
+a single unhelpful `False`:
+
+| Signal | Diagnosis | Fix |
 |---|---|---|
-| `torch.version.cuda is None` | CPU-only wheel | reinstall from the CUDA index |
-| CUDA build, no device visible | driver / hardware | update driver, check `nvidia-smi` |
+| `torch.version.cuda is None` | CPU-only wheel — the silent Windows default | reinstall from the CUDA index |
+| CUDA build, no device visible | driver too old, or GPU claimed elsewhere | update driver, check `nvidia-smi` |
+
+The index URL is deliberately **not** wired into `pyproject.toml` via `[tool.uv.sources]`.
+That works, but `uv` resolves the lockfile universally — every machine then needs to
+reach `download.pytorch.org` just to run `uv sync`, including CI and any sandbox with a
+restricted network policy. One explicit install command on the one machine that has a
+GPU is the smaller cost.
 
 ## Layout
 
