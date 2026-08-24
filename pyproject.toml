@@ -1,0 +1,20 @@
+[project]
+name = "ai-engineering-portfolio"
+version = "0.1.0"
+description = "Working through AI Engineering from Scratch, building each algorithm by hand before reaching for a library."
+requires-python = ">=3.11"
+
+# Phase 0 only. Every other dependency is declared below against the phase that
+# first needs it, so a fresh clone installs what it needs now and nothing more.
+dependencies = [
+    "jupyter>=1.1",
+]
+
+[project.optional-dependencies]
+phase-01 = ["numpy>=2.1", "matplotlib>=3.9"]   # Math foundations
+phase-02 = ["scikit-learn>=1.5", "pandas>=2.2"] # ML fundamentals
+phase-03 = ["torch>=2.5"]                       # Deep learning core
+
+[tool.uv]
+# A portfolio of lessons, not an installable package.
+package = false
