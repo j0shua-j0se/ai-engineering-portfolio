@@ -13,6 +13,14 @@ dependencies = [
 [project.optional-dependencies]
 phase-01 = ["numpy>=2.1", "matplotlib>=3.9"]   # Math foundations
 phase-02 = ["scikit-learn>=1.5", "pandas>=2.2"] # ML fundamentals
+# WARNING (Windows): installing torch from PyPI gets you a CPU-ONLY build. The PyPI
+# win_amd64 wheel is ~122 MB against ~427 MB on Linux because it ships no CUDA kernels.
+# It installs cleanly, imports cleanly, trains ~40x slower, and never errors.
+# On Windows install from the PyTorch CUDA index instead — get the current cuXXX tag
+# for your driver from https://pytorch.org/get-started/locally/ :
+#     uv pip install torch --index-url https://download.pytorch.org/whl/cuXXX
+# Then confirm with:
+#     python phase-00-setup-and-tooling/01-dev-environment/check_env.py --phase 3
 phase-03 = ["torch>=2.5"]                       # Deep learning core
 
 [tool.uv]

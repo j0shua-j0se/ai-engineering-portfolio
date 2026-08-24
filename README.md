@@ -30,6 +30,35 @@ them, rather than installed all at once. A fresh clone pulls what the current ph
 requires and nothing else — PyTorch is a multi-gigabyte download that Phase 0 has no
 use for.
 
+## Verifying the environment
+
+```bash
+python phase-00-setup-and-tooling/01-dev-environment/check_env.py            # Phase 0
+python phase-00-setup-and-tooling/01-dev-environment/check_env.py --phase 3  # before Phase 3
+```
+
+Dependencies not yet due are reported `DEFER`, not `FAIL`, so a correct Phase 0 machine
+reports clean. Exit status is non-zero only when something needed *now* is missing.
+
+### GPU, on Windows
+
+`uv sync --extra phase-03` resolves torch from PyPI, and the PyPI Windows wheel is
+**CPU-only**. It installs and imports without complaint, and then never touches the GPU.
+Install from the PyTorch CUDA index instead — take the current `cuXXX` tag from
+[pytorch.org/get-started](https://pytorch.org/get-started/locally/):
+
+```powershell
+uv pip install torch --index-url https://download.pytorch.org/whl/cuXXX
+```
+
+`check_env.py` tells the two failure modes apart, which `torch.cuda.is_available()`
+cannot:
+
+| Symptom | Meaning | Fix |
+|---|---|---|
+| `torch.version.cuda is None` | CPU-only wheel | reinstall from the CUDA index |
+| CUDA build, no device visible | driver / hardware | update driver, check `nvidia-smi` |
+
 ## Layout
 
 ```
